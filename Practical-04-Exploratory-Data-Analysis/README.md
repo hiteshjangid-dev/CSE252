@@ -111,9 +111,11 @@ pip install pandas matplotlib
 ```
 
 ```python
-import os
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.preprocessing import StandardScaler
 ```
 
 ---
@@ -124,17 +126,11 @@ import pandas as pd
 ### 🔹 Step 1 — One reusable real EDA function
 
 ```python
-def eda_report(df, name):
-    print(f"\n### EDA: {name} ###")
-    print(f"Real shape: {df.shape[0]} rows, {df.shape[1]} columns")
-    print(f"\nReal column types:\n{df.dtypes.value_counts()}")
-    missing = df.isnull().sum()
-    missing = missing[missing > 0]
-    if len(missing):
-        print(f"\nReal missing values:\n{missing}")
-    else:
-        print("\nNo real missing values.")
-    print(f"\nReal numeric summary:\n{df.describe().round(2)}")
+print(titanic_data.head())
+print(titanic_data.shape)
+print(titanic_data.dtypes)
+print(titanic_data.isnull().sum())
+print(titanic_data.describe())
 ```
 
 **What this does:** this single function runs identically on any real DataFrame — we call it twice, once per dataset, proving the same real EDA checklist generalizes.
@@ -161,8 +157,10 @@ No real missing values.
 ### 🔹 Step 2 — A real focused question: what predicts the final grade?
 
 ```python
-numeric_student = student.select_dtypes(include="number")
-corr_with_g3 = numeric_student.corr()["G3"].drop("G3").sort_values(key=abs, ascending=False)
+numeric_student = student_data.select_dtypes(include="number")
+corr_with_g3 = numeric_student.corr()["G3"].drop("G3")
+corr_with_g3 = corr_with_g3.sort_values(key=abs, ascending=False)
+print(corr_with_g3.head(5))
 ```
 
 **Real output:**
@@ -182,8 +180,9 @@ age        -0.161579
 ### 🔹 Step 3 — Real side-by-side visual comparison
 
 ```python
-axes[0].hist(titanic["Age"].dropna(), bins=25, color="#2563eb")
-axes[1].hist(student["G3"], bins=20, color="#16a34a")
+plt.hist(titanic_data["Age"].dropna(), bins=20)
+plt.hist(student_data["G3"], bins=20)
+plt.show()
 ```
 
 ![Distributions comparison](images/01_distributions_comparison.png)
@@ -198,66 +197,198 @@ axes[1].hist(student["G3"], bins=20, color="#16a34a")
 ## 8️⃣ Full Code
 
 ```python
-import os
-
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-os.makedirs("images", exist_ok=True)
-
-
-def eda_report(df, name):
-    """A real, reusable EDA summary: shape, types, missing values, and
-    basic real statistics -- the first things any real data scientist
-    checks before doing anything else with a new dataset."""
-    print(f"\n### EDA: {name} ###")
-    print(f"Real shape: {df.shape[0]} rows, {df.shape[1]} columns")
-    print(f"\nReal column types:\n{df.dtypes.value_counts()}")
-    missing = df.isnull().sum()
-    missing = missing[missing > 0]
-    if len(missing):
-        print(f"\nReal missing values:\n{missing}")
-    else:
-        print("\nNo real missing values.")
-    print(f"\nReal numeric summary:\n{df.describe().round(2)}")
+from sklearn.preprocessing import StandardScaler
 
 
-if __name__ == "__main__":
-    titanic = pd.read_csv("../datasets/titanic.csv")
-    eda_report(titanic, "Titanic (891 real passengers)")
+# ==================================================
+# TITANIC DATASET
+# ==================================================
 
-    student = pd.read_csv("../datasets/student-mat.csv")
-    eda_report(student, "Student Performance (395 real students)")
+print("\nTITANIC DATASET")
+print("=" * 40)
 
-    # Real, focused comparison: what predicts the real final grade (G3)?
-    print("\n### REAL FOCUSED QUESTION: WHAT PREDICTS STUDENT G3 (FINAL GRADE)? ###")
-    numeric_student = student.select_dtypes(include="number")
-    corr_with_g3 = numeric_student.corr()["G3"].drop("G3").sort_values(key=abs, ascending=False)
-    print("Real top 5 correlates of final grade (G3):")
-    print(corr_with_g3.head(5))
+# Load dataset
+titanic_data = pd.read_csv("../datasets/titanic.csv")
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    axes[0].hist(titanic["Age"].dropna(), bins=25, color="#2563eb")
-    axes[0].set_title("Real Titanic Age Distribution")
-    axes[0].set_xlabel("Age")
+# Use Gender name for the categorical column
+titanic_data = titanic_data.rename(
+    columns={"Sex": "Gender"}
+)
 
-    axes[1].hist(student["G3"], bins=20, color="#16a34a")
-    axes[1].set_title("Real Student Final Grade (G3) Distribution")
-    axes[1].set_xlabel("G3 (0-20 scale)")
-    plt.tight_layout()
-    plt.savefig("images/01_distributions_comparison.png")
-    plt.close()
+# EDA
+print("\nFirst 5 rows")
+print(titanic_data.head())
 
-    plt.figure(figsize=(7, 5))
-    plt.scatter(student["studytime"], student["G3"], alpha=0.5, color="#f97316")
-    plt.xlabel("Real weekly study time (1=low, 4=high)")
-    plt.ylabel("Real final grade (G3)")
-    plt.title("Real Study Time vs Final Grade")
-    plt.tight_layout()
-    plt.savefig("images/02_studytime_vs_grade.png")
-    plt.close()
+print("\nShape")
+print(titanic_data.shape)
 
-    print("\nDone. 2 real charts saved in images/")
+print("\nData Types")
+print(titanic_data.dtypes)
+
+print("\nMissing Values")
+print(titanic_data.isnull().sum())
+
+print("\nSummary Statistics")
+print(titanic_data.describe())
+
+print("\nGender Count")
+print(titanic_data["Gender"].value_counts())
+
+print("\nSurvival Count")
+print(titanic_data["Survived"].value_counts())
+
+# Handle missing values
+titanic_data["Age"] = titanic_data["Age"].fillna(
+    titanic_data["Age"].median()
+)
+
+titanic_data["Embarked"] = titanic_data["Embarked"].fillna(
+    titanic_data["Embarked"].mode()[0]
+)
+
+# Keep useful columns for analysis
+titanic_data = titanic_data[
+    [
+        "Survived", "Pclass", "Gender", "Age",
+        "SibSp", "Parch", "Fare", "Embarked"
+    ]
+]
+
+# Encoding
+titanic_data = pd.get_dummies(
+    titanic_data,
+    columns=["Gender", "Embarked"],
+    drop_first=True,
+    dtype=int
+)
+
+# Feature scaling
+scaler = StandardScaler()
+titanic_data["Age"] = scaler.fit_transform(
+    titanic_data[["Age"]]
+)
+
+titanic_data["Fare"] = scaler.fit_transform(
+    titanic_data[["Fare"]]
+)
+
+print("\nProcessed Titanic Data")
+print(titanic_data.head())
+
+# EDA visualizations
+sns.countplot(x="Survived", data=titanic_data)
+plt.title("Titanic Survival Count")
+plt.show()
+
+sns.histplot(titanic_data["Age"], bins=20)
+plt.title("Titanic Age Distribution")
+plt.show()
+
+sns.heatmap(
+    titanic_data.corr(),
+    annot=True,
+    fmt=".2f"
+)
+plt.title("Titanic Correlation")
+plt.show()
+
+
+# ==================================================
+# STUDENT PERFORMANCE DATASET
+# ==================================================
+
+print("\nSTUDENT PERFORMANCE DATASET")
+print("=" * 40)
+
+# Load dataset
+student_data = pd.read_csv(
+    "../datasets/student-mat.csv"
+)
+
+# Use Gender name for the categorical column
+student_data = student_data.rename(
+    columns={"sex": "Gender"}
+)
+
+# EDA
+print("\nFirst 5 rows")
+print(student_data.head())
+
+print("\nShape")
+print(student_data.shape)
+
+print("\nData Types")
+print(student_data.dtypes)
+
+print("\nMissing Values")
+print(student_data.isnull().sum())
+
+print("\nSummary Statistics")
+print(student_data.describe())
+
+print("\nGender Count")
+print(student_data["Gender"].value_counts())
+
+print("\nFinal Grade Summary")
+print(student_data["G3"].describe())
+
+# Encoding categorical columns
+student_data = pd.get_dummies(
+    student_data,
+    drop_first=True,
+    dtype=int
+)
+
+# Feature scaling
+scaler = StandardScaler()
+student_data[
+    [
+        "age", "Medu", "Fedu", "traveltime",
+        "studytime", "failures", "absences",
+        "G1", "G2", "G3"
+    ]
+] = scaler.fit_transform(
+    student_data[
+        [
+            "age", "Medu", "Fedu", "traveltime",
+            "studytime", "failures", "absences",
+            "G1", "G2", "G3"
+        ]
+    ]
+)
+
+print("\nProcessed Student Data")
+print(student_data.head())
+
+# EDA visualizations
+sns.histplot(student_data["G3"], bins=20)
+plt.title("Student Final Grade Distribution")
+plt.show()
+
+# Correlation with final grade
+student_correlation = student_data.corr()["G3"]
+student_correlation = student_correlation.drop("G3")
+student_correlation = student_correlation.sort_values(
+    key=abs,
+    ascending=False
+)
+
+print("\nTop 5 Correlations with G3")
+print(student_correlation.head(5))
+
+# Correlation heatmap
+sns.heatmap(
+    student_data.corr(),
+    annot=False
+)
+plt.title("Student Performance Correlation")
+plt.show()
+
+print("\nEDA and Preprocessing Completed")
 ```
 
 ---
@@ -267,30 +398,113 @@ if __name__ == "__main__":
 
 **Setup cell:**
 ```python
-!git clone https://github.com/<your-username>/CSE252-AI-ML-Practicals.git
-%cd CSE252-AI-ML-Practicals/Practical-04-Exploratory-Data-Analysis
+!pip install pandas matplotlib seaborn scikit-learn
 ```
 
-**Cell 1 — the reusable EDA function:**
+### Cell 1 — Titanic Dataset
+
 ```python
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-def eda_report(df, name):
-    print(f"### EDA: {name} ###")
-    print("Shape:", df.shape)
-    print("Missing:\n", df.isnull().sum()[df.isnull().sum() > 0])
-    print(df.describe())
+from sklearn.preprocessing import StandardScaler
 
-titanic = pd.read_csv("../datasets/titanic.csv")
-student = pd.read_csv("../datasets/student-mat.csv")
-eda_report(titanic, "Titanic")
-eda_report(student, "Student Performance")
+titanic_data = pd.read_csv(
+    "../datasets/titanic.csv"
+)
+
+titanic_data = titanic_data.rename(
+    columns={"Sex": "Gender"}
+)
+
+print(titanic_data.head())
+print(titanic_data.shape)
+print(titanic_data.dtypes)
+print(titanic_data.isnull().sum())
+print(titanic_data.describe())
+
+titanic_data["Age"] = titanic_data["Age"].fillna(
+    titanic_data["Age"].median()
+)
+
+titanic_data["Embarked"] = titanic_data["Embarked"].fillna(
+    titanic_data["Embarked"].mode()[0]
+)
+
+titanic_data = titanic_data[
+    [
+        "Survived", "Pclass", "Gender", "Age",
+        "SibSp", "Parch", "Fare", "Embarked"
+    ]
+]
+
+titanic_data = pd.get_dummies(
+    titanic_data,
+    columns=["Gender", "Embarked"],
+    drop_first=True,
+    dtype=int
+)
+
+scaler = StandardScaler()
+titanic_data[["Age", "Fare"]] = scaler.fit_transform(
+    titanic_data[["Age", "Fare"]]
+)
+
+print(titanic_data.head())
+
+sns.countplot(x="Survived", data=titanic_data)
+plt.show()
+
+sns.heatmap(titanic_data.corr(), annot=True, fmt=".2f")
+plt.show()
 ```
 
-**Cell 2 — correlation with final grade:**
+### Cell 2 — Student Performance Dataset
+
 ```python
-numeric_student = student.select_dtypes(include="number")
-print(numeric_student.corr()["G3"].sort_values(key=abs, ascending=False))
+student_data = pd.read_csv(
+    "../datasets/student-mat.csv"
+)
+
+student_data = student_data.rename(
+    columns={"sex": "Gender"}
+)
+
+print(student_data.head())
+print(student_data.shape)
+print(student_data.dtypes)
+print(student_data.isnull().sum())
+print(student_data.describe())
+
+student_data = pd.get_dummies(
+    student_data,
+    drop_first=True,
+    dtype=int
+)
+
+scaler = StandardScaler()
+student_scores = [
+    "age", "Medu", "Fedu", "traveltime",
+    "studytime", "failures", "absences",
+    "G1", "G2", "G3"
+]
+
+student_data[student_scores] = scaler.fit_transform(
+    student_data[student_scores]
+)
+
+print(student_data.head())
+
+plt.hist(student_data["G3"], bins=20)
+plt.xlabel("G3")
+plt.ylabel("Count")
+plt.title("Final Grade Distribution")
+plt.show()
+
+print(student_data.corr()["G3"].sort_values(
+    key=abs, ascending=False
+).head(5))
 ```
 
 ---
